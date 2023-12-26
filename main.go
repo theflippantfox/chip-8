@@ -1,10 +1,9 @@
 package main
 
-import(
-    "fmt"
+import (
+    ui "chip8/ui"
 )
 
 func main() {
-    fmt.Println("Hello World!")
+    ui.InitGUI()  
 }
-
