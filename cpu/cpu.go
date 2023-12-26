@@ -3,7 +3,7 @@ package cpu
 const Byte = 8
 const Kilobytes = 1024 * Byte
 
-type Chip_Context struct {
+type ChipContext struct {
 	// Chip-8 had 4Kilobytes (4096 Bytes) of memory
 	memory [4 * Kilobytes]uint8
 
@@ -24,7 +24,17 @@ type Chip_Context struct {
 	framebuffer [64 * 32]bool
 }
 
-func InitCPU() (err error) {
+func Frame() [32 * 64]bool {
+	chip := ChipContext{}
+	return testFrameBufferPrimer(chip.framebuffer)
+}
 
-	return err
+func testFrameBufferPrimer(buffer [32 * 64]bool) ([32*64]bool) {
+    for i := 0; i < 64 * 32; i++ {
+        if i%7==0 {
+            buffer[i] = true
+        }
+    }
+
+    return buffer
 }

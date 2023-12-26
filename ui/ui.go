@@ -7,31 +7,19 @@ import (
 	tm "github.com/buger/goterm"
 )
 
-func InitGUI() {
-	screen := [32][64]bool{}
-	for {
-		tm.Clear()
-
-		tm.MoveCursor(1, 1)
-
-		for i := 0; i < 32; i++ {
-			for j := 0; j < 64; j++ {
-				screen[i][j] = false
-			}
+func Renderer(framebuffer [32 * 64]bool) {
+	tm.MoveCursor(1, 2) //Using 2 to avoild overlapping with the prompt
+	for i := 0; i < 32*64; i++ {
+		if framebuffer[i] {
+			fmt.Print("*")
+		} else {
+			fmt.Print(" ")
 		}
 
-		for i := 0; i < 32; i++ {
-			for j := 0; j < 64; j++ {
-				if screen[i][j] == false {
-					fmt.Print(".")
-				} else {
-					fmt.Print("*")
-				}
-			}
-
-			fmt.Println("")
+		if i%64 == 0 {
+			fmt.Print("\n")
 		}
-		tm.Flush() // Call it every time at the end of rendering
-		time.Sleep(5 * time.Second)
 	}
+	tm.Flush()
+	time.Sleep(time.Second)
 }
