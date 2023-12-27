@@ -7,13 +7,13 @@ import (
 	tm "github.com/buger/goterm"
 )
 
-func Renderer(framebuffer [32 * 64]bool) {
+func Renderer(framebuffer [64 * 32]bool) {
 	tm.MoveCursor(1, 2) //Using 2 to avoild overlapping with the prompt
 	for i := 0; i < 32*64; i++ {
 		if framebuffer[i] {
 			fmt.Print("*")
 		} else {
-			fmt.Print(" ")
+			fmt.Print(".")
 		}
 
 		if i%64 == 0 {
