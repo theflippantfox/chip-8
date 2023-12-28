@@ -1,7 +1,10 @@
 package cpu
 
 import (
+	"fmt"
+	"io"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -28,9 +31,9 @@ type ChipContext struct {
 
 func InitChip8() ChipContext {
 	c := ChipContext{}
-
 	Reset(&c)
 
+	loadROM(&c)
 	return c
 }
 
@@ -67,6 +70,43 @@ func Reset(chip8 *ChipContext) {
 	set_fontset(chip8)
 }
 
+func loadROM(chip8 *ChipContext) {
+	// Open the file in read-only mode
+	file, err := os.Open("roms/demos/Zero Demo [zeroZshadow, 2007].ch8")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	buf := make([]byte, 1024)
+	for {
+		n, err := file.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if n > 0 {
+			fmt.Println(string(buf[:n]))
+		}
+	}
+
+	fi, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < int(fi.Size()); i++ {
+		chip8.memory[i+0x200] = buf[i]
+	}
+}
+
+func DumpMemory(c *ChipContext) {
+	fmt.Println(c.memory)
+}
+
 func increment_PC(chip8 *ChipContext) {
 	chip8.PC += 2
 }
@@ -74,6 +114,7 @@ func increment_PC(chip8 *ChipContext) {
 func Cycle(chip8 *ChipContext) {
 	chip8.opcode = uint16(chip8.memory[chip8.PC]<<8 | chip8.memory[chip8.PC+1])
 
+    fmt.Println(chip8.opcode)
 	instruction_set(chip8)
 
 	increment_PC(chip8)
@@ -302,19 +343,19 @@ func instruction_set(chip8 *ChipContext) {
 			if kk == 0x07 {
 				chip8.V[x] = chip8.delay_reg
 			} else if kk == 0x0A {
-                key_pressed := false
+				key_pressed := false
 
-                for i:=0;i<len(chip8.keys); i++ {
-                    if (chip8.keys[i] !=0) {
-                        chip8.V[x] = uint8(i)
-                        key_pressed = true
-                        break
-                    }
-                }
+				for i := 0; i < len(chip8.keys); i++ {
+					if chip8.keys[i] != 0 {
+						chip8.V[x] = uint8(i)
+						key_pressed = true
+						break
+					}
+				}
 
-                if(!key_pressed) {
-                    return
-                }
+				if !key_pressed {
+					return
+				}
 			} else if kk == 0x15 {
 				chip8.delay_reg = chip8.V[x]
 			} else if kk == 0x18 {
