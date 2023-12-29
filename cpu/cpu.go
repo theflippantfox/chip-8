@@ -1,8 +1,9 @@
 package cpu
 
 import (
-	"chip8/memory"
+	mem "chip8/memory"
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -14,6 +15,7 @@ type Chip struct {
 	stack [16]uint16 // Used to store the address that the interpreter shoud return to when finished with a subroutine
 
 	pc uint16 // Stores currently executing address
+	i  uint16 // Index register used to store address
 	sp uint8  //points to the topmost level of the stack
 
 	delay_timer uint8 // Used for delay timer. When non-zero it automatically decremented at a rate of 60Hz.
@@ -58,15 +60,15 @@ func increment_pc(c *Chip) {
 }
 
 func Execute(c *Chip, m *mem.Mem) {
-    c.oc = mem.Fetch(m, c.pc)
-    fmt.Println(c.oc, c.pc, c.sp, c.vx, c.stack)
-	
-    increment_pc(c)
-	
-    Instruction(c, m)
-	
-    time.Sleep(time.Second / 10)
-    fmt.Println()
+	c.oc = mem.Fetch(m, c.pc)
+	fmt.Println(c.oc, c.pc, c.sp, c.vx, c.stack)
+
+	increment_pc(c)
+
+	Instruction(c, m)
+
+	time.Sleep(time.Second / 10)
+	fmt.Println()
 }
 
 func Instruction(c *Chip, m *mem.Mem) {
@@ -75,7 +77,7 @@ func Instruction(c *Chip, m *mem.Mem) {
 	case 0x0:
 		{
 			m := c.oc & 0x000F
-            fmt.Printf("0x0")
+			fmt.Printf("0x0")
 			if m == 0x0 { // If Operation Code (oc) is 0x00E0 then clear the screen
 				// TODO: Clear Screen
 			} else if m == 0xE {
@@ -88,14 +90,14 @@ func Instruction(c *Chip, m *mem.Mem) {
 		{
 			// Jump to location nnn.
 			// The interpreter sets the program counter to nnn.
-            fmt.Printf("0x1")
-            c.pc = c.oc & 0x0FFF
+			fmt.Printf("0x1")
+			c.pc = c.oc & 0x0FFF
 		}
 	case 0x2: // 2nnn - CALL addr
 		{
 			// Call subroutine at nnn.
 			// The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
-            fmt.Printf("0x2")
+			fmt.Printf("0x2")
 			c.sp += 1
 			c.stack[c.sp] = c.pc
 			c.pc = c.oc & 0x0FFF
@@ -105,7 +107,7 @@ func Instruction(c *Chip, m *mem.Mem) {
 		{
 			// Skip next instruction if Vx = kk.
 			// The interpreter compares register Vx to kk, and if they are equal, increments the program counter by 2.
-            fmt.Printf("0x3")
+			fmt.Printf("0x3")
 			x := (c.oc & 0x0F00) >> 8
 			if c.vx[x] == c.oc&0x00FF {
 				increment_pc(c)
@@ -116,7 +118,7 @@ func Instruction(c *Chip, m *mem.Mem) {
 		{
 			// Skip next instruction if Vx != kk.
 			// The interpreter compares register Vx to kk, and if they are not equal, increments the program counter by 2.
-            fmt.Printf("0x4")
+			fmt.Printf("0x4")
 			x := (c.oc & 0x0F00) >> 8
 			if c.vx[x] != c.oc&0x00FF {
 				increment_pc(c)
@@ -127,7 +129,7 @@ func Instruction(c *Chip, m *mem.Mem) {
 		{
 			// Skip next instruction if Vx = Vy.
 			// The interpreter compares register Vx to register Vy, and if they are equal, increments the program counter by 2.
-            fmt.Printf("0x5")
+			fmt.Printf("0x5")
 			x := (c.oc & 0x0F00) >> 8
 			y := (c.oc & 0x00F0) >> 4
 
@@ -140,7 +142,7 @@ func Instruction(c *Chip, m *mem.Mem) {
 		{
 			// Set Vx = kk.
 			// The interpreter puts the value kk into register Vx.
-            fmt.Printf("0x6")
+			fmt.Printf("0x6")
 			x := (c.oc & 0x0F00) >> 8
 			c.vx[x] = (c.oc & 0x00FF)
 
@@ -149,13 +151,13 @@ func Instruction(c *Chip, m *mem.Mem) {
 		{
 			// Set Vx = Vx + kk.
 			// Adds the value kk to the value of register Vx, then stores the result in Vx.
-            fmt.Printf("0x7")
+			fmt.Printf("0x7")
 			x := (c.oc & 0x0F00) >> 8
 			c.vx[x] += (c.oc & 0x00FF)
 		}
 	case 0x8: // 8xym
 		{
-            fmt.Printf("0x8")
+			fmt.Printf("0x8")
 			x := (c.oc & 0x0F00) >> 8
 			y := (c.oc & 0x00F0) >> 4
 			m := c.oc & 0x000F
@@ -248,34 +250,108 @@ func Instruction(c *Chip, m *mem.Mem) {
 				}
 			} // Inner Switch end
 		} // Case end
-	case 0x9:
+	case 0x9: // 9xy0 - SNE Vx, Vy
 		{
-            fmt.Printf("0x9")
+			// Skip next instruction if Vx != Vy.
+			// The values of Vx and Vy are compared, and if they are not equal, the program counter is increased by 2.
+			fmt.Printf("0x9")
+			x := (c.oc & 0x0F00) >> 8
+			y := (c.oc & 0x00F0) >> 4
+
+			if c.vx[x] != c.vx[y] {
+				increment_pc(c)
+			}
 		}
-	case 0xA:
+	case 0xA: // Annn - LD I, addr
 		{
-            fmt.Printf("0xA")
+			// Set I = nnn.
+			// The value of register I is set to nnn.
+			fmt.Printf("0xA")
+			c.i = c.oc & 0x0FFF
 		}
-	case 0xB:
+	case 0xB: // Bnnn - JP V0, addr
 		{
-            fmt.Printf("0xB")
+			// Jump to location nnn + V0.
+			// The program counter is set to nnn plus the value of V0.
+			fmt.Printf("0xB")
+			c.pc = (c.oc & 0x0FFF) + c.vx[0]
 		}
-	case 0xC:
+	case 0xC: // Cxkk - RND Vx, byte
 		{
-            fmt.Printf("0xC")
+			// Set Vx = random byte AND kk.
+			// The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk.
+			// The results are stored in Vx. See instruction 8xy2 for more information on AND.
+			fmt.Printf("0xC")
+			x := (c.oc & 0x0F00) >> 8
+			kk := c.oc & 0x00FF
+
+			c.vx[x] = uint16(rand.Intn(255)) + kk
 		}
-	case 0xD:
+	case 0xD: // Dxyn - DRW Vx, Vy, nibble
 		{
-            fmt.Printf("0xD")
+			fmt.Printf("0xD")
+
+			// TODO: Add dxyn function
 		}
-	case 0xE:
+	case 0xE: // Ex9E - SKP Vx
 		{
-            fmt.Printf("0xE")
+			fmt.Printf("0xE")
+            increment_pc(c)
+			// mode := c.oc & 0x00FF
+			// if mode == 0x9E {
+			// 	// x := (c.oc & 0x0F00) >> 8
+			// 	// TODO: Add keypress and value check
+			// 	if c.isKeyDown && true { // Skip next instruction if key with the value of Vx is pressed.
+			//
+			// 		increment_pc(c)
+			// 	}
+			// } else if mode == 0xA1 {
+			// 	if !c.isKeyDown && false {
+			// 		increment_pc(c)
+			// 	}
+			// }
+
 		}
 	case 0xF:
 		{
-            fmt.Printf("0xF")
-		}
+			fmt.Printf("0xF")
 
+			x := (c.oc & 0x0F00) >> 8
+			kk := c.oc & 0x00FF
+
+			if kk == 0x07 {
+				c.vx[x] = uint16(c.delay_timer)
+			} else if kk == 0x0A {
+				key_pressed := false
+
+				
+
+				if !key_pressed {
+					return
+				}
+			} else if kk == 0x15 {
+				c.delay_timer = uint8(c.vx[x])
+			} else if kk == 0x18 {
+				c.sound_timer = uint8(c.vx[x])
+			} else if kk == 0x1E {
+				c.i += uint16(c.vx[x])
+			} else if kk == 0x29 {
+				c.i = uint16(c.vx[x]) * 0x5
+			} else if kk == 0x33 {
+				m.Memory[c.i] = uint8(c.vx[x] / 100)
+				m.Memory[c.i+1] = uint8((c.vx[x] / 10) % 10) 
+				m.Memory[c.i+2] = uint8(c.vx[x] % 100) 
+			} else if kk == 0x55 {
+				var i uint16 = 0
+				for i = 0; i < x; i++ {
+					m.Memory[c.i+i] = uint8(c.vx[i])
+				}
+			} else if kk == 0x65 {
+				var i uint16 = 0
+				for i = 0; i < x; i++ {
+					c.vx[i] = uint16(m.Memory[c.i+i])
+				}
+			}
+        }
 	}
 }
