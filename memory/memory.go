@@ -48,3 +48,8 @@ func LoadROMtoMemory(m *Mem, path string) {
 		}
 	}
 }
+
+func Fetch(m *Mem, pc uint16) uint16 {
+    data := (uint16(m.Memory[pc]) << 8) | uint16(m.Memory[pc+1])
+    return data
+}

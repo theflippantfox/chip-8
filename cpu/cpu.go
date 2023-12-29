@@ -58,9 +58,15 @@ func increment_pc(c *Chip) {
 }
 
 func Execute(c *Chip, m *mem.Mem) {
-	fmt.Println(c.oc, c.pc, c.vx)
-	Instruction(c, m)
-	time.Sleep(time.Second * 2)
+    c.oc = mem.Fetch(m, c.pc)
+    fmt.Println(c.oc, c.pc, c.sp, c.vx, c.stack)
+	
+    increment_pc(c)
+	
+    Instruction(c, m)
+	
+    time.Sleep(time.Second / 10)
+    fmt.Println()
 }
 
 func Instruction(c *Chip, m *mem.Mem) {
@@ -69,6 +75,7 @@ func Instruction(c *Chip, m *mem.Mem) {
 	case 0x0:
 		{
 			m := c.oc & 0x000F
+            fmt.Printf("0x0")
 			if m == 0x0 { // If Operation Code (oc) is 0x00E0 then clear the screen
 				// TODO: Clear Screen
 			} else if m == 0xE {
@@ -76,51 +83,51 @@ func Instruction(c *Chip, m *mem.Mem) {
 				c.pc = uint16(c.sp)
 				c.sp -= 1
 			}
-			increment_pc(c)
 		}
 	case 0x1: // 1nnn - JP addr
 		{
 			// Jump to location nnn.
 			// The interpreter sets the program counter to nnn.
-			c.pc = c.oc & 0x0FFF
-			increment_pc(c)
+            fmt.Printf("0x1")
+            c.pc = c.oc & 0x0FFF
 		}
 	case 0x2: // 2nnn - CALL addr
 		{
 			// Call subroutine at nnn.
 			// The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
+            fmt.Printf("0x2")
 			c.sp += 1
 			c.stack[c.sp] = c.pc
 			c.pc = c.oc & 0x0FFF
 
-			increment_pc(c)
 		}
 	case 0x3: // 3xkk - SE Vx, byte
 		{
 			// Skip next instruction if Vx = kk.
 			// The interpreter compares register Vx to kk, and if they are equal, increments the program counter by 2.
+            fmt.Printf("0x3")
 			x := (c.oc & 0x0F00) >> 8
 			if c.vx[x] == c.oc&0x00FF {
 				increment_pc(c)
 			}
 
-			increment_pc(c)
 		}
 	case 0x4: // 4xkk - SNE Vx, byte
 		{
 			// Skip next instruction if Vx != kk.
 			// The interpreter compares register Vx to kk, and if they are not equal, increments the program counter by 2.
+            fmt.Printf("0x4")
 			x := (c.oc & 0x0F00) >> 8
 			if c.vx[x] != c.oc&0x00FF {
 				increment_pc(c)
 			}
 
-			increment_pc(c)
 		}
 	case 0x5: // 5xy0 - SE Vx, Vy
 		{
 			// Skip next instruction if Vx = Vy.
 			// The interpreter compares register Vx to register Vy, and if they are equal, increments the program counter by 2.
+            fmt.Printf("0x5")
 			x := (c.oc & 0x0F00) >> 8
 			y := (c.oc & 0x00F0) >> 4
 
@@ -128,26 +135,27 @@ func Instruction(c *Chip, m *mem.Mem) {
 				increment_pc(c)
 			}
 
-			increment_pc(c)
 		}
 	case 0x6: // 6xkk - LD Vx, byte
 		{
 			// Set Vx = kk.
 			// The interpreter puts the value kk into register Vx.
+            fmt.Printf("0x6")
 			x := (c.oc & 0x0F00) >> 8
 			c.vx[x] = (c.oc & 0x00FF)
 
-			increment_pc(c)
 		}
 	case 0x7: // 7xkk - ADD Vx, byte
 		{
 			// Set Vx = Vx + kk.
 			// Adds the value kk to the value of register Vx, then stores the result in Vx.
+            fmt.Printf("0x7")
 			x := (c.oc & 0x0F00) >> 8
 			c.vx[x] += (c.oc & 0x00FF)
 		}
 	case 0x8: // 8xym
 		{
+            fmt.Printf("0x8")
 			x := (c.oc & 0x0F00) >> 8
 			y := (c.oc & 0x00F0) >> 4
 			m := c.oc & 0x000F
@@ -239,28 +247,34 @@ func Instruction(c *Chip, m *mem.Mem) {
 					c.vx[x] *= 2
 				}
 			} // Inner Switch end
-            increment_pc(c)
 		} // Case end
 	case 0x9:
 		{
+            fmt.Printf("0x9")
 		}
 	case 0xA:
 		{
+            fmt.Printf("0xA")
 		}
 	case 0xB:
 		{
+            fmt.Printf("0xB")
 		}
 	case 0xC:
 		{
+            fmt.Printf("0xC")
 		}
 	case 0xD:
 		{
+            fmt.Printf("0xD")
 		}
 	case 0xE:
 		{
+            fmt.Printf("0xE")
 		}
 	case 0xF:
 		{
+            fmt.Printf("0xF")
 		}
 
 	}
