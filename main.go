@@ -1,11 +1,19 @@
 package main
 
 import (
-	cpu "chip8/cpu"
+	"chip8/cpu"
+	"chip8/memory"
+	"fmt"
 )
 
 func main() {
-	chip8 := cpu.InitChip8()
+	c := cpu.NewChip()
+	m := mem.NewMemory()
 
-	cpu.Cycle(&chip8)
+	mem.LoadROMtoMemory(m, "roms/demos/Trip8 Demo (2008) [Revival Studios].ch8")
+
+    for i:=0; i==i; i++ {
+        fmt.Println("Cycle: ", i) 
+		cpu.Execute(c, m)
+    }
 }
