@@ -43,7 +43,7 @@ func Render(gfx *Display) {
 			tm.Print(" ")
 		}
 
-		if i > 0 && i%63 == 0 {
+		if i > 0 && i%64 == 0 {
 			tm.Println()
 		}
 
