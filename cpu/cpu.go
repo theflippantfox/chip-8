@@ -1,75 +1,102 @@
 package cpu
 
 import (
+<<<<<<< HEAD
 	"fmt"
 	"io"
+=======
+	"chip8/display"
+	mem "chip8/memory"
+>>>>>>> v2
 	"math/rand"
 	"os"
 	"time"
 )
 
-type ChipContext struct {
-	opcode uint16 //Stores the current opcode
+type Chip struct {
+	oc uint16
 
-	memory [4096]uint8 // Chip-8 had 4Kilobytes (4096 Bytes) of memory
+	vx [16]uint16 // Chip-8 has 16 general purpose resisters referred as Vx where x is a hexadecimal digit from 0 to F
 
-	V [16]uint8 // 16 8-Bit registers from V0 to VF
+	stack [16]uint16 // Used to store the address that the interpreter shoud return to when finished with a subroutine
 
-	stack [16]uint16 // Stack
+	pc uint16 // Stores currently executing address
+	i  uint16 // Index register used to store address
+	sp uint8  //points to the topmost level of the stack
 
-	// Special Registers
-	I         uint16 // Address Pointer
-	PC        uint16 // Program Counter
-	SP        uint8  // Stack Pointer
-	delay_reg uint8  // Delay timer
-	sound_reg uint8  // Sound timer
+	delay_timer uint8 // Used for delay timer. When non-zero it automatically decremented at a rate of 60Hz.
+	sound_timer uint8 // Used for sound timer. When non-zero it automatically decremented at a rate of 60Hz.
 
-	framebuffer [64 * 32]bool // Display framebuffer top-left to bottom-right
-	keys        []uint8
-	fontset     [80]uint8
+	KeyDown     bool
+	RenderCycle bool
 }
 
+<<<<<<< HEAD
 func InitChip8() ChipContext {
 	c := ChipContext{}
 	Reset(&c)
 
 	loadROM(&c)
 	return c
+=======
+func NewChip() *Chip {
+	return &Chip{
+		pc: 0x200,
+	}
+>>>>>>> v2
 }
 
-func Reset(chip8 *ChipContext) {
-	// Variable Declarations
-	entry_point := 0x200 // ROMs are loaded at memory location 0x200/512
+func Reset(c *Chip, m *mem.Mem) bool {
+	c.pc = 0x200 // Programs should start at 0x200
 
-	// Set Defaults
-	chip8.PC = uint16(entry_point) // Program Counter should start at the starting point of ROM
+	c.oc = 0
+	c.sp = 0
 
-	// All registers should be at 0/false state
-	chip8.opcode = 0x00E0
-	chip8.I = 0
-	chip8.SP = 0
-	chip8.delay_reg = 0
-	chip8.sound_reg = 0
+	c.delay_timer = 0
+	c.sound_timer = 0
 
-	for i := 0; i < len(chip8.memory); i++ {
-		chip8.memory[i] = 0
+	for i := 0; i < len(m.Memory); i++ {
+		m.Memory[i] = 0
 	}
 
-	for i := 0; i < len(chip8.V); i++ {
-		chip8.V[i] = 0
+	for i := 0; i < len(c.stack); i++ {
+		c.stack[i] = 0
 	}
 
-	for i := 0; i < len(chip8.stack); i++ {
-		chip8.stack[i] = 0
+	for i := 0; i < len(c.vx); i++ {
+		c.vx[i] = 0
 	}
 
-	for i := 0; i < len(chip8.framebuffer); i++ {
-		chip8.framebuffer[i] = false
-	}
-
-	set_fontset(chip8)
+	return true
 }
 
+func increment_pc(c *Chip) {
+	c.pc += 2
+}
+
+func EmulateCycle(c *Chip, m *mem.Mem, gfx *display.Display) {
+	c.oc = mem.Fetch(m, c.pc)
+ 	c.RenderCycle = false
+	increment_pc(c)
+
+	Instruction(c, m, gfx)   
+
+    if c.delay_timer > 0 {
+		c.delay_timer -= 1
+	}
+
+	if c.sound_timer > 0 {
+		c.sound_timer -= 1
+	}
+
+	time.Sleep(time.Second / 700)
+
+	if c.RenderCycle {
+		display.Render(gfx)
+	}
+}
+
+<<<<<<< HEAD
 func loadROM(chip8 *ChipContext) {
 	// Open the file in read-only mode
 	file, err := os.Open("roms/demos/Zero Demo [zeroZshadow, 2007].ch8")
@@ -125,226 +152,260 @@ func instruction_set(chip8 *ChipContext) {
 
 	switch first_digit_of_opcode {
 	case 0x0: // When opcode starts with 0x0
+=======
+func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
+	ins := (c.oc & 0xF000) >> 12
+	switch ins {
+	case 0x0:
+>>>>>>> v2
 		{
-			if chip8.opcode == 0x00E0 { // If opcode = 0x00E0, clear the framebuffer
-				for i := 0; i < len(chip8.framebuffer); i++ {
-					chip8.framebuffer[i] = true
-				}
-			} else if chip8.opcode == 0x00EE { // If opode = 0x00EE, set the PC to the address at the top of the stack, then subtracts 1 from the SP.
-				chip8.SP -= 1
-				chip8.PC = chip8.stack[chip8.SP]
+			m := c.oc & 0x000F
+			if m == 0x0 { // If Operation Code (oc) is 0x00E0 then clear the screen
+				display.ClearDisplay(gfx)
+				c.RenderCycle = true
+			} else if m == 0xE {
+				// The interpreter sets the program counter to the address at the top of the stack, then subtracts 1 from the stack pointer.
+				c.sp -= 1
+				c.pc = c.stack[c.sp]
 			}
 		}
-	case 0x1: // If opcode = 0x1nnn, set the program counter to nnn.
-
+	case 0x1: // 1nnn - JP addr
 		{
-			chip8.PC = chip8.opcode & 0x0FFF
+			// Jump to location nnn.
+			// The interpreter sets the program counter to nnn.
+			c.pc = c.oc & 0x0FFF
 		}
-
-	case 0x2: // The interpreter increments the SP, then puts the current PC on the top of the stack. The PC is then set to nnn.
+	case 0x2: // 2nnn - CALL addr
 		{
-			chip8.stack[chip8.SP] = chip8.PC
-			chip8.SP += 1
-			chip8.PC = chip8.opcode & 0x0FFF
+			// Call subroutine at nnn.
+			// The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
+			c.stack[c.sp] = c.pc
+			c.sp += 1
+			c.pc = c.oc & 0x0FFF
+
 		}
-	case 0x3: // Skip next instruction if Vx = kk.
+	case 0x3: // 3xkk - SE Vx, byte
 		{
-			x := (chip8.opcode & 0x0F00) >> 8
-
-			if chip8.V[x] == uint8(chip8.opcode)&0x00FF {
-				increment_PC(chip8)
-			}
-		}
-	case 0x4: // Skip next instruction if Vx != kk
-		{
-			x := (chip8.opcode & 0x0F00) >> 8
-
-			if chip8.V[x] != uint8(chip8.opcode)&0x00FF {
-				increment_PC(chip8)
-			}
-		}
-	case 0x5: // Skip next instruction if Vx = Vy.
-		{
-			x := (chip8.opcode & 0x0F00) >> 8
-			y := (chip8.opcode & 0x00F0) >> 4
-
-			if chip8.V[x] == chip8.V[y] {
-				increment_PC(chip8)
+			// Skip next instruction if Vx = kk.
+			// The interpreter compares register Vx to kk, and if they are equal, increments the program counter by 2.
+			x := (c.oc & 0x0F00) >> 8
+			if c.vx[x] == c.oc&0x00FF {
+				increment_pc(c)
 			}
 
 		}
-
-	case 0x6: //Set Vx = kk.
+	case 0x4: // 4xkk - SNE Vx, byte
 		{
-			x := (chip8.opcode & 0xF00) >> 8
-			kk := byte(chip8.opcode)
+			// Skip next instruction if Vx != kk.
+			// The interpreter compares register Vx to kk, and if they are not equal, increments the program counter by 2.
+			x := (c.oc & 0x0F00) >> 8
+			if c.vx[x] != c.oc&0x00FF {
+				increment_pc(c)
+			}
 
-			chip8.V[x] = kk
 		}
-
-	case 0x7: //Set Vx = Vx + kk.
+	case 0x5: // 5xy0 - SE Vx, Vy
 		{
-			x := (chip8.opcode & 0xF00) >> 8
-			kk := byte(chip8.opcode)
+			// Skip next instruction if Vx = Vy.
+			// The interpreter compares register Vx to register Vy, and if they are equal, increments the program counter by 2.
+			x := (c.oc & 0x0F00) >> 8
+			y := (c.oc & 0x00F0) >> 4
 
-			chip8.V[x] += kk
+			if c.vx[x] == c.vx[y] {
+				increment_pc(c)
+			}
+
 		}
-
-	case 0x8:
+	case 0x6: // 6xkk - LD Vx, byte
 		{
-			x := (chip8.opcode & 0x0F00) >> 8
-			y := (chip8.opcode & 0x00F0) >> 4
-			m := chip8.opcode & 0x000F
+			// Set Vx = kk.
+			// The interpreter puts the value kk into register Vx.
+			x := (c.oc & 0x0F00) >> 8
+			c.vx[x] = (c.oc & 0x00FF)
+
+		}
+	case 0x7: // 7xkk - ADD Vx, byte
+		{
+			// Set Vx = Vx + kk.
+			// Adds the value kk to the value of register Vx, then stores the result in Vx.
+			x := (c.oc & 0x0F00) >> 8
+			c.vx[x] += (c.oc & 0x00FF)
+		}
+	case 0x8: // 8xym
+		{
+			x := (c.oc & 0x0F00) >> 8
+			y := (c.oc & 0x00F0) >> 4
+			m := c.oc & 0x000F
 
 			switch m {
-			case 0:
-				chip8.V[x] = chip8.V[y]
-			case 1:
-				chip8.V[x] |= chip8.V[y]
-			case 2:
-				chip8.V[x] &= chip8.V[y]
-			case 3:
-				chip8.V[x] ^= chip8.V[y]
-			case 4:
+			case 0x0: // 8xy0 - LD Vx, Vy
 				{
-					sum := chip8.V[x]
-					sum += chip8.V[y]
+					//Set Vx = Vy.
+					//Stores the value of register Vy in register Vx.
+					c.vx[x] = c.vx[y]
+				}
+			case 0x1: // 8xy1 - OR Vx, Vy
+				{
+					// Set Vx = Vx OR Vy.
+					// Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx.
+					// A bitwise OR compares the corrseponding bits from two values, and if either bit is 1,
+					// then the same bit in the result is also 1. Otherwise, it is 0.
 
-					if sum > 255 {
-						chip8.V[0xF] = 1
-					} else {
-						chip8.V[0xF] = 0
+					c.vx[x] |= c.vx[y]
+				}
+			case 0x2: // 8xy2 - AND Vx, Vy
+				{
+					// Set Vx = Vx AND Vy.
+					// Performs a bitwise AND on the values of Vx and Vy, then stores the result in Vx.
+					// A bitwise AND compares the corrseponding bits from two values, and if both bits are 1,
+					// then the same bit in the result is also 1. Otherwise, it is 0.
+					c.vx[x] &= c.vx[y]
+				}
+			case 0x3: // Set Vx = Vx XOR Vy.
+				{
+					// Performs a bitwise exclusive OR on the values of Vx and Vy, then stores the result in Vx.
+					// An exclusive OR compares the corrseponding bits from two values, and if the bits are not both the same,
+					// then the corresponding bit in the result is set to 1. Otherwise, it is 0.
+					c.vx[x] ^= c.vx[y]
+				}
+			case 0x4: // 8xy4 - ADD Vx, Vy
+				{
+					// Set Vx = Vx + Vy, set VF = carry.
+					// The values of Vx and Vy are added together. If the result is greater than 8 bits (i.e., > 255,) VF is set to 1,
+					// otherwise 0. Only the lowest 8 bits of the result are kept, and stored in Vx.
+					c.vx[x] += +c.vx[y]
+					c.vx[0xF] = 0
+					if c.vx[y] > 0xFF-c.vx[x] {
+						c.vx[0xF] = 1
+					}
+				}
+			case 0x5: // 8xy5 - SUB Vx, Vy
+				{
+					// Set Vx = Vx - Vy, set VF = NOT borrow.
+					// If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from Vx, and the results stored in Vx.
+					c.vx[0xF] = 0
+					if c.vx[x] > c.vx[y] {
+						c.vx[0xF] = 1
+					}
+					c.vx[x] -= c.vx[y]
+				}
+			case 0x6: // 8xy6 - SHR Vx {, Vy}
+				{
+					// Set Vx = Vx SHR 1.
+					// If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
+					c.vx[0xF] = c.vx[x] & 0x1
+					c.vx[x] >>= 1 // >> divides by 2
+				}
+			case 0x7: // 8xy7 - SUBN Vx, Vy
+				{
+					// Set Vx = Vy - Vx, set VF = NOT borrow.
+					// If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from Vy, and the results stored in Vx.
+					c.vx[0xF] = 0
+					if c.vx[y] > c.vx[x] {
+						c.vx[0xF] = 1
 					}
 
-					chip8.V[x] = byte(sum)
+					c.vx[x] = c.vx[y] - c.vx[x]
 				}
-			case 5:
+			case 0xE: // 8xyE - SHL Vx {, Vy}
 				{
-					if chip8.V[x] > chip8.V[y] {
-						chip8.V[0xF] = 1
-					} else {
-						chip8.V[0xF] = 0
-					}
-
-					chip8.V[x] -= chip8.V[y]
+					// Set Vx = Vx SHL 1.
+					// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
+					c.vx[0xF] = ((c.vx[x] & 0x0F00) >> 8) >> 7
+					c.vx[x] <<= 1
 				}
-			case 6:
-				{
-					if chip8.V[x]&0x01 == 0x01 {
-						chip8.V[0xF] = 1
-					} else {
-						chip8.V[0xF] = 0
-					}
+			} // Inner Switch end
+		} // Case end
+	case 0x9: // 9xy0 - SNE Vx, Vy
+		{
+			// Skip next instruction if Vx != Vy.
+			// The values of Vx and Vy are compared, and if they are not equal, the program counter is increased by 2.
+			x := (c.oc & 0x0F00) >> 8
+			y := (c.oc & 0x00F0) >> 4
 
-					chip8.V[x] /= 2
-				}
-			case 7:
-				{
-					if chip8.V[y] > chip8.V[x] {
-						chip8.V[0xF] = 1
-					} else {
-						chip8.V[0xF] = 0
-					}
-
-					chip8.V[x] = chip8.V[y] - chip8.V[x]
-				}
-			case 14:
-				{
-					if chip8.V[x]&0x80 == 0x80 {
-						chip8.V[0xF] = 1
-					} else {
-						chip8.V[0xF] = 0
-					}
-
-					chip8.V[x] *= 2
-				}
+			if c.vx[x] != c.vx[y] {
+				increment_pc(c)
 			}
 		}
-
-	case 0x9:
+	case 0xA: // Annn - LD I, addr
 		{
-			x := (chip8.opcode & 0x0F00) >> 8
-			y := (chip8.opcode & 0x00F0) >> 4
-
-			if chip8.V[x] != chip8.V[y] {
-				increment_PC(chip8)
-			}
-
+			// Set I = nnn.
+			// The value of register I is set to nnn.
+			c.i = c.oc & 0x0FFF
 		}
-	case 0xA:
+	case 0xB: // Bnnn - JP V0, addr
 		{
-			chip8.I = chip8.opcode & 0x0FFF
-			increment_PC(chip8)
+			// Jump to location nnn + V0.
+			// The program counter is set to nnn plus the value of V0.
+			c.pc = (c.oc & 0x0FFF) + c.vx[0]
 		}
-	case 0xB:
+	case 0xC: // Cxkk - RND Vx, byte
 		{
-			chip8.PC = (chip8.opcode & 0x0FFF) + uint16(chip8.V[0])
+			// Set Vx = random byte AND kk.
+			// The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk.
+			// The results are stored in Vx. See instruction 8xy2 for more information on AND.
+			x := (c.oc & 0x0F00) >> 8
+			kk := c.oc & 0x00FF
+
+			c.vx[x] = uint16(rand.Intn(255)) + kk
 		}
-	case 0xC: //Set Vx = random byte AND kk.
+	case 0xD: // Dxyn - DRW Vx, Vy, nibble
 		{
-			x := (chip8.opcode & 0x0F00) >> 8
-			kk := byte(chip8.opcode)
+			x := c.vx[(c.oc&0x0F00)>>8]
+			y := c.vx[(c.oc&0x00F0)>>4]
+			n := c.oc & 0x000F
 
-			chip8.V[x] = kk + byte(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(255))
-		}
-	case 0xD:
-		{
-			chip8.V[0xF] = 0
-
-			xx := (chip8.opcode & 0x0F00) >> 8
-			yy := (chip8.opcode & 0x00F0) >> 4
-			nn := (chip8.opcode & 0x000F)
-
-			valX := chip8.V[xx]
-			valY := chip8.V[yy]
-
-			var j uint16 = 0
 			var i uint16 = 0
+			var j uint16 = 0
+			c.vx[0xF] = 0
+			for j = 0; j < n; j++ {
+				pixel := mem.Fetch(m, c.i+j) // Get the pixel from memory
 
-			for j = 0; j < nn; j++ {
-				pixel := chip8.memory[chip8.I+j]
 				for i = 0; i < 8; i++ {
-					msb := 0x80
-
-					if pixel&uint8(msb>>i) != 0 {
-						tX := (valX + uint8(i)) % 64
-						tY := (valY + uint8(j)) & 32
-
-						idx := tX + (tY * 64)
-
-						if chip8.framebuffer[idx] == false {
-							chip8.framebuffer[idx] = true
+					// check if the current pixel will be drawn by ANDING it to 1 aka
+					// check if the pixel is set to 1 (This will scan through the byte,
+					// one bit at the time)
+					if pixel&(0x80>>i) != 0 {
+						// since the pixel will be drawn, check the destination location in
+						// gfx for collision aka verify if that location is flipped on (== 1)
+						if display.FetchPixel(gfx, x+i, y+j) == 1 {
+							c.vx[0xF] = 1
 						}
-
+						display.XORPixel(gfx, x+i, y+j)
 					}
 				}
 			}
+			c.RenderCycle = true
 		}
-	case 0xE:
+	case 0xE: // Ex9E - SKP Vx
 		{
-			x := (chip8.opcode & 0x0F00) >> 8
-			kk := chip8.opcode & 0x00FF
+			increment_pc(c)
+			// mode := c.oc & 0x00FF
+			// if mode == 0x9E {
+			// 	// x := (c.oc & 0x0F00) >> 8
+			// 	// TODO: Add keypress and value check
+			// 	if c.isKeyDown && true { // Skip next instruction if key with the value of Vx is pressed.
+			//
+			// 		increment_pc(c)
+			// 	}
+			// } else if mode == 0xA1 {
+			// 	if !c.isKeyDown && false {
+			// 		increment_pc(c)
+			// 	}
+			// }
 
-			if kk == 0x9E {
-				if chip8.keys[chip8.V[x]] == 1 {
-					increment_PC(chip8)
-				} else if kk == 0xA1 {
-					if chip8.keys[chip8.V[x]] != 1 {
-						increment_PC(chip8)
-					}
-				}
-			}
 		}
 	case 0xF:
 		{
-			x := (chip8.opcode & 0x0F00) >> 8
-			kk := chip8.opcode & 0x00FF
+			x := (c.oc & 0x0F00) >> 8
+			kk := c.oc & 0x00FF
 
 			if kk == 0x07 {
-				chip8.V[x] = chip8.delay_reg
+				c.vx[x] = uint16(c.delay_timer)
 			} else if kk == 0x0A {
 				key_pressed := false
 
+<<<<<<< HEAD
 				for i := 0; i < len(chip8.keys); i++ {
 					if chip8.keys[i] != 0 {
 						chip8.V[x] = uint8(i)
@@ -353,54 +414,34 @@ func instruction_set(chip8 *ChipContext) {
 					}
 				}
 
+=======
+>>>>>>> v2
 				if !key_pressed {
 					return
 				}
 			} else if kk == 0x15 {
-				chip8.delay_reg = chip8.V[x]
+				c.delay_timer = uint8(c.vx[x])
 			} else if kk == 0x18 {
-				chip8.sound_reg = chip8.V[x]
+				c.sound_timer = uint8(c.vx[x])
 			} else if kk == 0x1E {
-				chip8.I += uint16(chip8.V[x])
+				c.i += uint16(c.vx[x])
 			} else if kk == 0x29 {
-				chip8.I = uint16(chip8.V[x]) * 0x5
+				c.i = uint16(c.vx[x]) * 0x5
 			} else if kk == 0x33 {
-				chip8.memory[chip8.I] = chip8.V[x] / 100
-				chip8.memory[chip8.I+1] = (chip8.V[x] / 10) % 10
-				chip8.memory[chip8.I+2] = chip8.V[x] % 100
+				m.Memory[c.i] = uint8(c.vx[x] / 100)
+				m.Memory[c.i+1] = uint8((c.vx[x] / 10) % 10)
+				m.Memory[c.i+2] = uint8(c.vx[x] % 100)
 			} else if kk == 0x55 {
 				var i uint16 = 0
 				for i = 0; i < x; i++ {
-					chip8.memory[chip8.I+i] = chip8.V[i]
+					m.Memory[c.i+i] = uint8(c.vx[i])
 				}
 			} else if kk == 0x65 {
 				var i uint16 = 0
 				for i = 0; i < x; i++ {
-					chip8.V[i] = chip8.memory[chip8.I+i]
+					c.vx[i] = uint16(m.Memory[c.i+i])
 				}
 			}
 		}
-	}
-
-}
-
-func set_fontset(chip8 *ChipContext) { // Sets fonts for the chip
-	chip8.fontset = [80]uint8{
-		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-		0x20, 0x60, 0x20, 0x20, 0x70, // 1
-		0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-		0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-		0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-		0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-		0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-		0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-		0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-		0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-		0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-		0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-		0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-		0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-		0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-		0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 	}
 }

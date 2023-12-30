@@ -1,12 +1,19 @@
 package main
 
 import (
-	cpu "chip8/cpu"
+	"chip8/cpu"
+	"chip8/display"
+	"chip8/memory"
 )
 
 func main() {
-	chip8 := cpu.InitChip8()
+	c := cpu.NewChip()
+	m := mem.NewMemory()
+    gfx := display.NewDisplay()
 
-	cpu.Cycle(&chip8)
-    cpu.DumpMemory(&chip8)
+	mem.LoadROMtoMemory(m, "roms/programs/Chip8 emulator Logo [Garstyciuks].ch8")
+    
+    for i:=0; i==i; i++ {
+		cpu.EmulateCycle(c, m, gfx)
+    }
 }
