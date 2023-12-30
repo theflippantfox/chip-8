@@ -11,7 +11,7 @@ func main() {
 	m := mem.NewMemory()
     gfx := display.NewDisplay()
 
-	mem.LoadROMtoMemory(m, "roms/programs/Chip8 emulator Logo [Garstyciuks].ch8")
+	mem.LoadROMtoMemory(m, "tests/bin/1-chip8-logo.ch8")
     
     for i:=0; i==i; i++ {
 		cpu.EmulateCycle(c, m, gfx)
