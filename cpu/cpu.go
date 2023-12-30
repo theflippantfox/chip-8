@@ -59,21 +59,26 @@ func increment_pc(c *Chip) {
 	c.pc += 2
 }
 
-func Execute(c *Chip, m *mem.Mem, gfx *display.Display) {
-	if(c.oc == 4096) {
-        panic("Running Outside Memory")
-    }
-    c.oc = mem.Fetch(m, c.pc)
-    // fmt.Println(gfx.Buffer)
-    c.RenderCycle = false
+func EmulateCycle(c *Chip, m *mem.Mem, gfx *display.Display) {
+	c.oc = mem.Fetch(m, c.pc)
+ 	c.RenderCycle = false
 	increment_pc(c)
-	Instruction(c, m, gfx)
+
+	Instruction(c, m, gfx)   
+
+    if c.delay_timer > 0 {
+		c.delay_timer -= 1
+	}
+
+	if c.sound_timer > 0 {
+		c.sound_timer -= 1
+	}
 
 	time.Sleep(time.Second / 700)
 
-    if c.RenderCycle {
-        display.Render(gfx)
-    }
+	if c.RenderCycle {
+		display.Render(gfx)
+	}
 }
 
 func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
@@ -83,11 +88,12 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 		{
 			m := c.oc & 0x000F
 			if m == 0x0 { // If Operation Code (oc) is 0x00E0 then clear the screen
-			    display.ClearDisplay(gfx)	
+				display.ClearDisplay(gfx)
+				c.RenderCycle = true
 			} else if m == 0xE {
 				// The interpreter sets the program counter to the address at the top of the stack, then subtracts 1 from the stack pointer.
-				c.pc = uint16(c.sp)
 				c.sp -= 1
+				c.pc = c.stack[c.sp]
 			}
 		}
 	case 0x1: // 1nnn - JP addr
@@ -100,8 +106,8 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 		{
 			// Call subroutine at nnn.
 			// The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
-			c.sp += 1
 			c.stack[c.sp] = c.pc
+			c.sp += 1
 			c.pc = c.oc & 0x0FFF
 
 		}
@@ -194,12 +200,11 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 					// Set Vx = Vx + Vy, set VF = carry.
 					// The values of Vx and Vy are added together. If the result is greater than 8 bits (i.e., > 255,) VF is set to 1,
 					// otherwise 0. Only the lowest 8 bits of the result are kept, and stored in Vx.
-					sum := c.vx[x] + c.vx[y]
+					c.vx[x] += +c.vx[y]
 					c.vx[0xF] = 0
-					if sum > 0x0008 {
+					if c.vx[y] > 0xFF-c.vx[x] {
 						c.vx[0xF] = 1
 					}
-					c.vx[x] = sum
 				}
 			case 0x5: // 8xy5 - SUB Vx, Vy
 				{
@@ -215,12 +220,8 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 				{
 					// Set Vx = Vx SHR 1.
 					// If the least-significant bit of Vx is 1, then VF is set to 1, otherwise 0. Then Vx is divided by 2.
-					c.vx[0xF] = 0
-					if c.vx[x]&0x000F == 0x1 {
-						c.vx[0xF] = 1
-					}
-
-					c.vx[x] /= 2
+					c.vx[0xF] = c.vx[x] & 0x1
+					c.vx[x] >>= 1 // >> divides by 2
 				}
 			case 0x7: // 8xy7 - SUBN Vx, Vy
 				{
@@ -237,12 +238,8 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 				{
 					// Set Vx = Vx SHL 1.
 					// If the most-significant bit of Vx is 1, then VF is set to 1, otherwise to 0. Then Vx is multiplied by 2.
-					c.vx[0xF] = 0
-					if ((c.vx[x] & 0xF000) >> 12) == 1 {
-						c.vx[0xF] = 1
-					}
-
-					c.vx[x] *= 2
+					c.vx[0xF] = ((c.vx[x] & 0x0F00) >> 8) >> 7
+					c.vx[x] <<= 1
 				}
 			} // Inner Switch end
 		} // Case end
@@ -287,7 +284,7 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 
 			var i uint16 = 0
 			var j uint16 = 0
-
+			c.vx[0xF] = 0
 			for j = 0; j < n; j++ {
 				pixel := mem.Fetch(m, c.i+j) // Get the pixel from memory
 
@@ -298,14 +295,14 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 					if pixel&(0x80>>i) != 0 {
 						// since the pixel will be drawn, check the destination location in
 						// gfx for collision aka verify if that location is flipped on (== 1)
-						if display.FetchPixel(gfx, x, y) == 1 {
+						if display.FetchPixel(gfx, x+i, y+j) == 1 {
 							c.vx[0xF] = 1
 						}
-						display.XORPixel(gfx, x, y)
+						display.XORPixel(gfx, x+i, y+j)
 					}
 				}
 			}
-            c.RenderCycle = true
+			c.RenderCycle = true
 		}
 	case 0xE: // Ex9E - SKP Vx
 		{

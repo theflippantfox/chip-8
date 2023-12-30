@@ -11,10 +11,9 @@ func main() {
 	m := mem.NewMemory()
     gfx := display.NewDisplay()
 
-	mem.LoadROMtoMemory(m, "roms/games/Timebomb.ch8")
+	mem.LoadROMtoMemory(m, "roms/programs/Chip8 emulator Logo [Garstyciuks].ch8")
     
     for i:=0; i==i; i++ {
-		cpu.Execute(c, m, gfx)
+		cpu.EmulateCycle(c, m, gfx)
     }
-
 }

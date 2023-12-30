@@ -23,15 +23,15 @@ func ClearDisplay(gfx *Display) {
 }
 
 func FetchPixel(gfx *Display, x uint16, y uint16) uint8 {
-	return gfx.Buffer[x+y*64]
+	return gfx.Buffer[x+(y*64)]
 }
 
 func SetPixel(gfx *Display, x uint16, y uint16, val uint8) {
-	gfx.Buffer[x+y*64] = val
+	gfx.Buffer[x+(y*64)] = val
 }
 
 func XORPixel(gfx *Display, x uint16, y uint16) {
-	gfx.Buffer[x+y*64] ^= 1
+	gfx.Buffer[x+(y*64)] ^= 1
 }
 
 func Render(gfx *Display) {
