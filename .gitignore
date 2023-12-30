@@ -1,3 +1,4 @@
 roms/
 go.sum
 tests/
+.gitignore
