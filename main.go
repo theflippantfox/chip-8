@@ -2,20 +2,19 @@ package main
 
 import (
 	"chip8/cpu"
+	"chip8/display"
 	"chip8/memory"
-	"fmt"
 )
 
 func main() {
 	c := cpu.NewChip()
 	m := mem.NewMemory()
+    gfx := display.NewDisplay()
 
-	mem.LoadROMtoMemory(m, "roms/programs/Chip8 emulator Logo [Garstyciuks].ch8")
-    // fmt.Println(m.Memory)
+	mem.LoadROMtoMemory(m, "roms/games/Timebomb.ch8")
     
     for i:=0; i==i; i++ {
-        fmt.Println("Cycle: ", i) 
-		cpu.Execute(c, m)
+		cpu.Execute(c, m, gfx)
     }
 
 }

@@ -50,6 +50,11 @@ func LoadROMtoMemory(m *Mem, path string) {
 }
 
 func Fetch(m *Mem, pc uint16) uint16 {
-    data := (uint16(m.Memory[pc]) << 8) | uint16(m.Memory[pc+1])
-    return data
+	data := (uint16(m.Memory[pc]) << 8) | uint16(m.Memory[pc+1])
+	return data
+}
+
+func Put(m *Mem, addr uint16, val uint16) {
+	m.Memory[addr] = uint8(val & 0xFF)
+	m.Memory[addr+1] = uint8(val >> 8)
 }
