@@ -18,13 +18,13 @@ func NewMemory() *Mem {
 	return &Mem{}
 }
 
-func Reset(m *Mem) {
+func (m *Mem) Reset() {
 	for i := 0; i < len(m.Memory); i++ {
 		m.Memory[i] = 0
 	}
 }
 
-func LoadROMtoMemory(m *Mem, path string) {
+func (m *Mem) LoadROMtoMemory(path string) {
 	f, err := os.Open(path)
 	if err != nil {
 	}
@@ -49,12 +49,12 @@ func LoadROMtoMemory(m *Mem, path string) {
 	}
 }
 
-func Fetch(m *Mem, pc uint16) uint16 {
+func (m *Mem) Fetch(pc uint16) uint16 {
 	data := (uint16(m.Memory[pc]) << 8) | uint16(m.Memory[pc+1])
 	return data
 }
 
-func Put(m *Mem, addr uint16, val uint16) {
+func (m *Mem) Put(addr uint16, val uint16) {
 	m.Memory[addr] = uint8(val & 0xFF)
 	m.Memory[addr+1] = uint8(val >> 8)
 }

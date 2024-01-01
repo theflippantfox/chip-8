@@ -9,11 +9,11 @@ import (
 func main() {
 	c := cpu.NewChip()
 	m := mem.NewMemory()
-    gfx := display.NewDisplay()
+	gfx := display.NewDisplay()
 
-	mem.LoadROMtoMemory(m, "tests/bin/1-chip8-logo.ch8")
-    
-    for i:=0; i==i; i++ {
-		cpu.EmulateCycle(c, m, gfx)
-    }
+	m.LoadROMtoMemory("tests/bin/3-corax+.ch8")
+
+	for i := 0; i == i; i++ {
+		c.EmulateCycle(m, gfx)
+	}
 }

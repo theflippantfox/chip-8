@@ -31,7 +31,7 @@ func NewChip() *Chip {
 	}
 }
 
-func Reset(c *Chip, m *mem.Mem) bool {
+func (c *Chip) Reset(m *mem.Mem) bool {
 	c.pc = 0x200 // Programs should start at 0x200
 
 	c.oc = 0
@@ -55,18 +55,18 @@ func Reset(c *Chip, m *mem.Mem) bool {
 	return true
 }
 
-func increment_pc(c *Chip) {
+func (c *Chip) increment_pc() {
 	c.pc += 2
 }
 
-func EmulateCycle(c *Chip, m *mem.Mem, gfx *display.Display) {
-	c.oc = mem.Fetch(m, c.pc)
- 	c.RenderCycle = false
-	increment_pc(c)
+func (c *Chip) EmulateCycle(m *mem.Mem, gfx *display.Display) {
+	c.oc = m.Fetch(c.pc)
+	c.RenderCycle = false
+	c.increment_pc()
 
-	Instruction(c, m, gfx)   
+	c.Instruction(m, gfx)
 
-    if c.delay_timer > 0 {
+	if c.delay_timer > 0 {
 		c.delay_timer -= 1
 	}
 
@@ -74,21 +74,21 @@ func EmulateCycle(c *Chip, m *mem.Mem, gfx *display.Display) {
 		c.sound_timer -= 1
 	}
 
-	time.Sleep(time.Second / 700)
+	time.Sleep(time.Second / 7000)
 
 	if c.RenderCycle {
-		display.Render(gfx)
+		gfx.Render()
 	}
 }
 
-func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
+func (c *Chip) Instruction(m *mem.Mem, gfx *display.Display) {
 	ins := (c.oc & 0xF000) >> 12
 	switch ins {
 	case 0x0:
 		{
 			m := c.oc & 0x000F
 			if m == 0x0 { // If Operation Code (oc) is 0x00E0 then clear the screen
-				display.ClearDisplay(gfx)
+				gfx.ClearDisplay()
 				c.RenderCycle = true
 			} else if m == 0xE {
 				// The interpreter sets the program counter to the address at the top of the stack, then subtracts 1 from the stack pointer.
@@ -117,7 +117,7 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 			// The interpreter compares register Vx to kk, and if they are equal, increments the program counter by 2.
 			x := (c.oc & 0x0F00) >> 8
 			if c.vx[x] == c.oc&0x00FF {
-				increment_pc(c)
+				c.increment_pc()
 			}
 
 		}
@@ -127,7 +127,7 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 			// The interpreter compares register Vx to kk, and if they are not equal, increments the program counter by 2.
 			x := (c.oc & 0x0F00) >> 8
 			if c.vx[x] != c.oc&0x00FF {
-				increment_pc(c)
+				c.increment_pc()
 			}
 
 		}
@@ -139,7 +139,7 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 			y := (c.oc & 0x00F0) >> 4
 
 			if c.vx[x] == c.vx[y] {
-				increment_pc(c)
+				c.increment_pc()
 			}
 
 		}
@@ -251,7 +251,7 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 			y := (c.oc & 0x00F0) >> 4
 
 			if c.vx[x] != c.vx[y] {
-				increment_pc(c)
+				c.increment_pc()
 			}
 		}
 	case 0xA: // Annn - LD I, addr
@@ -286,7 +286,7 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 			var j uint16 = 0
 			c.vx[0xF] = 0
 			for j = 0; j < n; j++ {
-				pixel := mem.Fetch(m, c.i+j) // Get the pixel from memory
+				pixel := m.Fetch(c.i + j) // Get the pixel from memory
 
 				for i = 0; i < 8; i++ {
 					// check if the current pixel will be drawn by ANDING it to 1 aka
@@ -295,10 +295,10 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 					if pixel&(0x80>>i) != 0 {
 						// since the pixel will be drawn, check the destination location in
 						// gfx for collision aka verify if that location is flipped on (== 1)
-						if display.FetchPixel(gfx, x+i, y+j) == 1 {
+						if gfx.FetchPixel(x+i, y+j) == 1 {
 							c.vx[0xF] = 1
 						}
-						display.XORPixel(gfx, x+i, y+j)
+						gfx.XORPixel(x+i, y+j)
 					}
 				}
 			}
@@ -306,7 +306,7 @@ func Instruction(c *Chip, m *mem.Mem, gfx *display.Display) {
 		}
 	case 0xE: // Ex9E - SKP Vx
 		{
-			increment_pc(c)
+			c.increment_pc()
 			// mode := c.oc & 0x00FF
 			// if mode == 0x9E {
 			// 	// x := (c.oc & 0x0F00) >> 8
