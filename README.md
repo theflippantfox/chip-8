@@ -5,16 +5,30 @@ _My implimentation of Chip-8 interpreter in golang in order for me to get famili
 
 ## Getting Started
 Firstly, clone the repo to your desired location
-```git clone https://github.com/theflippantfox/chip-8```
+```shell
+
+git clone https://github.com/theflippantfox/chip-8
+```
 
 After that change your current directory to the chip-8. For most it should be
-```cd chip-8```
+```shell
+
+cd chip-8
+```
 
 Then sync the mods using
-```go mod tidy```
+```shell
+
+go mod tidy
+```
 
 You can now test the program using 
-```go run chip8```
+```shell
+
+go run chip8
+```
 
 To build the program and get an executable file run
-```go build chip8```
+```shell
+go build chip8
+```
