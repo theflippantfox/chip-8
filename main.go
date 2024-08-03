@@ -1,9 +1,10 @@
 package main
 
 import (
-	"chip8/cpu"
-	"chip8/display"
-	"chip8/memory"
+	"chip8/cmd/cpu"
+	"chip8/cmd/display"
+	"chip8/cmd/memory"
+	"os"
 )
 
 func main() {
@@ -11,7 +12,13 @@ func main() {
 	m := mem.NewMemory()
 	gfx := display.NewDisplay()
 
-	m.LoadROMtoMemory("tests/bin/3-corax+.ch8")
+	roamArg := os.Args[1]
+	roam := "tests/bin/3-corax+.ch8"
+	if roamArg != "" {
+		roam = roamArg
+	}
+
+	m.LoadROMtoMemory(roam)
 
 	for i := 0; i == i; i++ {
 		c.EmulateCycle(m, gfx)
