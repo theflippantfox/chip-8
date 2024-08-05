@@ -1,7 +1,11 @@
 # Chip-8 in Go
 _My implimentation of Chip-8 interpreter in golang in order for me to get familiar with workings of a CPU and basics of emulation_
 
+## Features
+ - Uses terminal itself as the display
+
 ## Known Issues
+ - For some reason the topmost row of pixels is displayed at the bottom
 
 ## Getting Started
 Firstly, clone the repo to your desired location
