@@ -25,7 +25,7 @@ type Chip struct {
 	RenderCycle bool
 }
 
-func NewChip() *Chip {
+func NewChip() *Chip { // Initialize the chip
 	return &Chip{
 		pc: 0x200,
 	}
