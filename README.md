@@ -20,7 +20,7 @@ After that change your current directory to the chip-8. For most it should be
 cd chip-8
 ```
 
-Then sync the mods using
+Then sync the libraries using
 ```shell
 
 go mod tidy
