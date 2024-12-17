@@ -29,7 +29,7 @@ go mod tidy
 You can now test the program using go run chip8 tests/[name of the test]
 Example:
 ```shell
-go run chip8 tests/1-chip8-logo.ch8
+go run chip8 roms/1-chip8-logo.ch8
 ```
 
 To build the program and get an executable file run
