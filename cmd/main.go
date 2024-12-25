@@ -1,9 +1,9 @@
 package main
 
 import (
-	"chip8/cmd/cpu"
-	"chip8/cmd/display"
-	"chip8/cmd/memory"
+	"chip8/pkg/cpu"
+	"chip8/pkg/display"
+	"chip8/pkg/memory"
 	"os"
 )
 

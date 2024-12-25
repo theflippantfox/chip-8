@@ -1,8 +1,8 @@
 package cpu
 
 import (
-	"chip8/cmd/display"
-	mem "chip8/cmd/memory"
+	"chip8/pkg/display"
+	mem "chip8/pkg/memory"
 	"math/rand"
 	"time"
 )
