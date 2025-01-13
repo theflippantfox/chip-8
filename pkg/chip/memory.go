@@ -1,4 +1,4 @@
-package chip 
+package chip
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ func (m Memory) loadROMtoMemory(path string) {
 	if err != nil {
 		panic(err)
 	}
+
 	defer f.Close()
 	buf := make([]uint8, 4096)
 	stats, err := f.Stat()
@@ -34,12 +35,12 @@ func (m Memory) loadROMtoMemory(path string) {
 	}
 }
 
-func (m Memory) Fetch(pc uint16) uint16 {
+func (m Memory) fetch(pc uint16) uint16 {
 	data := (uint16(m[pc]) << 8) | uint16(m[pc+1])
 	return data
 }
 
-func (m Memory) Put(addr uint16, val uint16) {
+func (m Memory) put(addr uint16, val uint16) {
 	m[addr] = uint8(val & 0xFF)
 	m[addr+1] = uint8(val >> 8)
 }

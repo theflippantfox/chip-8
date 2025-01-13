@@ -207,7 +207,7 @@ func (c Chip) instruction() {
 			var j uint16 = 0
 			c.cpu.vx[0xF] = 0
 			for j = 0; j < n; j++ {
-				pixel := c.mem.Fetch(c.cpu.i + j) // Get the pixel from memory
+				pixel := c.mem.fetch(c.cpu.i + j) // Get the pixel from memory
 
 				for i = 0; i < 8; i++ {
 					// check if the current pixel will be drawn by ANDING it to 1 aka

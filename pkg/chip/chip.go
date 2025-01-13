@@ -19,8 +19,13 @@ type Chip struct {
 }
 
 func Init() {
-	c := Chip{}
-	c.reset()
+	c := Chip{
+		mem: Memory{},
+		cpu: CPU{
+			pc: 0x200,
+		},
+		display: Display{},
+	}
 
 	roamArg := os.Args[1]
 	roam := ""
@@ -30,14 +35,9 @@ func Init() {
 
 	c.mem.loadROMtoMemory(roam)
 
-	println(roam)
-	for i := 0; i < len(c.mem); i++ {
-		print(c.mem[i])
+	for i := 0; i == i; i++ {
+		c.emulateCycle()
 	}
-
-	//for i := 0; i == i; i++ {
-	//	c.emulateCycle()
-	//}
 }
 
 func (c Chip) reset() bool {
@@ -65,7 +65,7 @@ func (c Chip) reset() bool {
 }
 
 func (c Chip) emulateCycle() {
-	c.oc = c.mem.Fetch(c.cpu.pc)
+	c.oc = c.mem.fetch(c.cpu.pc)
 	c.renderCycle = false
 	c.cpu.increment_pc()
 
